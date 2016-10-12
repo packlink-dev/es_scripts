@@ -74,19 +74,36 @@ case ${ACTION} in
 		fi
 		;;
 	restore|RESTORE)
+		INDEX=${3}
 		if [ ! -z ${SNAPSHOT} ]
 		then
-			echo -e "\e[01;33msnapshot: \e[01;35m${ACTION} \e[01;37m[\e[01;36m ${SNAPSHOT} \e[01;37m]\e[00m"
-			curl -s -XPOST "http://${HOST}:9200/_snapshot/${REPO}/${SNAPSHOT}/_restore" \
-				-d '{
-						"index_settings": {
-							"index.nummber_of_shards": 1,
-							"index.number_of_replicas": 0
-						},
-						"ignore_index_settings": [
-							"index.refresh_interval"
-						]
-					}' | jq .
+			if [ ! -z ${INDEX} ]
+			then
+				echo -e "\e[01;33msnapshot: \e[01;35m${ACTION} \e[01;37m[\e[01;36m ${SNAPSHOT} \e[01;37m]  \e[01;37m[\e[01;36m ${INDEX} \e[01;37m]\e[00m"
+				curl -s -XPOST "http://${HOST}:9200/_snapshot/${REPO}/${SNAPSHOT}/_restore" \
+					-d '{
+							"indices": "'${INDEX}'",
+							"index_settings": {
+								"index.nummber_of_shards": 1,
+								"index.number_of_replicas": 0
+							},
+							"ignore_index_settings": [
+								"index.refresh_interval"
+							]
+						}' | jq .
+			else
+				echo -e "\e[01;33msnapshot: \e[01;35m${ACTION} \e[01;37m[\e[01;36m ${SNAPSHOT} \e[01;37m]\e[00m"
+				curl -s -XPOST "http://${HOST}:9200/_snapshot/${REPO}/${SNAPSHOT}/_restore" \
+					-d '{
+							"index_settings": {
+								"index.nummber_of_shards": 1,
+								"index.number_of_replicas": 0
+							},
+							"ignore_index_settings": [
+								"index.refresh_interval"
+							]
+						}' | jq .
+			fi
 		else
 			echo "FAILLLLLLLLLLLLLLLLLL.. in ${ACTION}"
 		fi

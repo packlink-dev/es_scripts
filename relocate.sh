@@ -1,5 +1,6 @@
 #!/bin/bash
 
+DELAY=${1:-5}
 HOST=hulk
 curl -s -XGET http://${HOST}:9200/_cat/nodes
 echo
@@ -24,7 +25,7 @@ do
              }
          ]
      }'
-    sleep 2
+    sleep ${DELAY}
     # echo -e "\e[00m"
 done < <( curl -s -XGET http://${HOST}:9200/_cat/shards | grep -i unassigned | awk '{print $1,$2}' | sort )
 
