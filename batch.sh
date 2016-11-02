@@ -29,9 +29,9 @@ do
         close ${INDEX}
         echo
         ./snapshots.sh restore ${LINE} ${INDEX}
-        sleep 20
-        optimize
+        sleep 5
         echo
     done
     echo "${LINE} done" >> ./batch.done
+    optimize
 done

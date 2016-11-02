@@ -80,7 +80,7 @@ case ${ACTION} in
 			if [ ! -z ${INDEX} ]
 			then
 				echo -e "\e[01;33msnapshot: \e[01;35m${ACTION} \e[01;37m[\e[01;36m ${SNAPSHOT} \e[01;37m]  \e[01;37m[\e[01;36m ${INDEX} \e[01;37m]\e[00m"
-				curl -s -XPOST "http://${HOST}:9200/_snapshot/${REPO}/${SNAPSHOT}/_restore" \
+				curl -s -XPOST "http://${HOST}:9200/_snapshot/${REPO}/${SNAPSHOT}/_restore?wait_for_completion=true" \
 					-d '{
 							"indices": "'${INDEX}'",
 							"index_settings": {
