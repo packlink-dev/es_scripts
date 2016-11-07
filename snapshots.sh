@@ -3,7 +3,8 @@
 HOST=hulk
 ACTION=${1}
 SNAPSHOT=${2}
-REPO="es_logger_rescue"
+# REPO="es_logger_rescue"
+REPO="es_logger"
 
 
 ls_snapshot_indexes(){
