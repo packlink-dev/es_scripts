@@ -1,7 +1,6 @@
 #!/bin/bash
 
-HOST=hulk
-REPO=es_logger_rescue
+source snapshots.conf
 
 ls_snapshot_indexes(){
     local SNAPSHOT=${1}

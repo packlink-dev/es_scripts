@@ -62,12 +62,13 @@ case ${ACTION} in
 			curl -s -XDELETE "http://${HOST}:9200/_snapshot/${REPO}/${SNAPSHOT}"
 		;;
 	create|CREATE)
-		INDEX=${3}
-		if [ ! -z ${INDEX} ] && [ ! -z ${SNAPSHOT} ]
+		ARGS=(${@})
+		INDEX=${ARGS[@]:2}
+		if [ ! -z "${INDEX}" ] && [ ! -z ${SNAPSHOT} ]
 		then
 			echo -e "\e[01;33msnapshot: \e[01;35m${ACTION} from ${INDEX} \e[01;37m[\e[01;36m ${SNAPSHOT} \e[01;37m]\e[00m"
 			curl -s -XPUT "http://${HOST}:9200/_snapshot/${REPO}/${SNAPSHOT}?wait_for_completion=true" \
-				-d '{"indices": "'${INDEX}'","ignore_unavailable": "true","include_global_state": false}' | jq .
+				-d '{"indices": "'${INDEX[@]// /,}'","ignore_unavailable": "true","include_global_state": false}' | jq .
 		else
 			echo "FAILLLLLLLLLLLLLLLLLL.. in ${ACTION}"
 		fi
