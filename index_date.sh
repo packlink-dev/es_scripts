@@ -33,6 +33,7 @@ STEP=86400
 # __main__
 for INDEX in ${!INDICES[@]}
 do
+	[ ! -d ${INDEX} ] && mkdir ${INDEX}
 	# STEPS: How long each microservice gonna be in production, in days		
 	STEPS=${INDICES["${INDEX}"]}
 	# FROM: From date in life
@@ -48,6 +49,7 @@ do
 	for INDEX_DATE in $(seq ${FROM} ${STEP} ${YESTERDAY})
 	do
 		THE_INDEX=${INDEX}-$(date --date="@${INDEX_DATE}" +%Y.%m.%d) 
+
 		echo -en "\t\e[01;35m${THE_INDEX}\t[ \e[01;37m"
 		curl -s -o /dev/null -w %{http_code} http://${HOST}:9200/${THE_INDEX}
 		echo -e "\e[01;35m ]\e[00m"
@@ -60,16 +62,18 @@ do
 	do
 		THE_INDEX=${INDEX}-$(date --date="@${INDEX_DATE}" +%Y.%m.%d) 
 		HTTP_CODE=$(curl -s -o /dev/null -w %{http_code} http://${HOST}:9200/${THE_INDEX})
+
 		echo -en "\t\e[01;36m${THE_INDEX}\t[ "
 		[[ ${HTTP_CODE} != 200 ]] && echo -e "\e[01;31m${HTTP_CODE}\e[01;36m ]\e[00m" && break
 		echo -e "\e[01;32m${HTTP_CODE}\e[01;36m ]\e[00m"
+
 		INDICES_LIST+="${THE_INDEX} "
+		touch ${INDEX}/${THE_INDEX}
 	done
 	# CREATE SNAPSHOT
 	./snapshots.sh create ${INDEX}_$(date +%Y%m%d) ${INDICES_LIST[@]}
 	# DELETE INDICES
 	./indices.sh delete ${INDICES_LIST[@]}
 	INDICES_LIST=''
-
 done
 echo -e "\e[00m"
