@@ -1,3 +1,4 @@
-HOST=hulk
-REPO="es_logger"
-EDGE_DATE=$(date +%s --date="2016/01/01")
+DELAY=""
+EDGE_DATE=""
+HOST=""
+REPO=""
