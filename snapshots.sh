@@ -10,6 +10,23 @@ ls_snapshot_indexes(){
 	curl -s -XGET http://${HOST}:9200/_snapshot/${REPO}/${SNAPSHOT} | jq -r ' .snapshots | .[] | .indices | .[] ' | sort
 }
 
+ls_snapshots(){
+	curl -s -XGET "http://${HOST}:9200/_snapshot/${REPO}/_all" | jq -r ' .snapshots | .[] | .snapshot' | sort
+}
+
+close_index(){
+	local INDEX=${1}
+        NODES=$( curl -s -XGET 192.168.5.13:9200/_nodes | \
+                jq -r '.nodes | .[] | .http | .publish_address' | \
+                grep -v 127.0.0.1 | sed -r 's:inet\[\/(.*)\]:\1:' )
+        for NODE in ${NODES}
+        do
+                echo -en "\t\e[01;46m${NODE}\e[00m\t"
+                curl -s -XPOST "http://${NODE}/${INDEX}/_close"
+                echo -e "\e[00m"
+        done
+}
+
 index_cat_info(){
 	local INDEX=${1}
 	STATUS=$( curl -s -o /dev/null -w "%{http_code}" -XGET "http://${HOST}:9200/_cat/indices/${INDEX}" )
@@ -108,8 +125,19 @@ case ${ACTION} in
 			echo "FAILLLLLLLLLLLLLLLLLL.. in ${ACTION}"
 		fi
 		;;
+	close) # _snapshoted_indices)
+		echo -e "\e[01;33msnapshot: \e[01;35m${ACTION}\e[00m"
+		for SNAPSHOT in $(ls_snapshots)
+		do
+			echo -e "\t\e[01;37m[\e[01;36m ${SNAPSHOT} \e[01;37m]\e[00m"
+			for INDEX in $(ls_snapshot_indexes ${SNAPSHOT})
+			do
+				echo -e "\t\t\e[01;37m[\e[01;34m ${INDEX} \e[01;37m]\e[00m"
+				close_index ${INDEX}
+			done
+		done
+		;;
 	*)
 		echo "in progressss...."
 		;;
 esac
-		
