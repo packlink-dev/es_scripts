@@ -73,6 +73,7 @@ do
 	# CREATE SNAPSHOT
 	./snapshots.sh create ${INDEX}_$(date +%Y%m%d) ${INDICES_LIST[@]}
 	# DELETE INDICES
+	./indices.sh close ${INDICES_LIST[@]}
 	./indices.sh delete ${INDICES_LIST[@]}
 	INDICES_LIST=''
 done

@@ -148,17 +148,41 @@ case ${ACTION} in
 		optimize		
 		;;
 	open|OPEN)
-		INDEX=${2}
-		[[ -z ${INDEX} ]] && echo -e "\e[01;41mMissing Index\e[00m" && exit 1
-		echo -e "\e[01;33mindices: \e[01;35m${ACTION} \e[01;37m[\e[01;36m ${INDEX} \e[01;37m]\e[00m"
-		open_index ${INDEX}
+		ARGS=(${@})
+		INDICES=${ARGS[@]:1}
+		[[ -z "${INDICES}" ]] && echo -e "\e[01;41mMissing Index\e[00m" && exit 1
+		echo -e "\e[01;33mindices: \e[01;35m${ACTION} \e[01;37m[\e[01;36m ${INDICES} \e[01;37m]\e[00m"
+		if [ ! -z "${INDICES}" ]
+		then
+			for INDEX in ${INDICES[@]}
+			do
+				open_index ${INDEX}
+			done
+		fi
 		;;
+		# INDEX=${2}
+		# [[ -z ${INDEX} ]] && echo -e "\e[01;41mMissing Index\e[00m" && exit 1
+		# echo -e "\e[01;33mindices: \e[01;35m${ACTION} \e[01;37m[\e[01;36m ${INDEX} \e[01;37m]\e[00m"
+		# open_index ${INDEX}
+		# ;;
 	close|CLOSE)
-		INDEX=${2}
-		[[ -z ${INDEX} ]] && echo -e "\e[01;41mMissing Index\e[00m" && exit 1
-		echo -e "\e[01;33mindices: \e[01;35m${ACTION} \e[01;37m[\e[01;36m ${INDEX} \e[01;37m]\e[00m"
-		close_index ${INDEX}
+		ARGS=(${@})
+		INDICES=${ARGS[@]:1}
+		[[ -z "${INDICES}" ]] && echo -e "\e[01;41mMissing Index\e[00m" && exit 1
+		echo -e "\e[01;33mindices: \e[01;35m${ACTION} \e[01;37m[\e[01;36m ${INDICES} \e[01;37m]\e[00m"
+		if [ ! -z "${INDICES}" ]
+		then
+			for INDEX in ${INDICES[@]}
+			do
+				close_index ${INDEX}
+			done
+		fi
 		;;
+		# INDEX=${2}
+		# [[ -z ${INDEX} ]] && echo -e "\e[01;41mMissing Index\e[00m" && exit 1
+		# echo -e "\e[01;33mindices: \e[01;35m${ACTION} \e[01;37m[\e[01;36m ${INDEX} \e[01;37m]\e[00m"
+		# close_index ${INDEX}
+		# ;;
 	relocate|RELOCATE)
 		echo -e "\e[01;33mindices: \e[01;35m${ACTION}\e[00m"
 		relocate

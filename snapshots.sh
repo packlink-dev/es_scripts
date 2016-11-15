@@ -77,6 +77,7 @@ case ${ACTION} in
 		echo -e "\e[01;33msnapshot: \e[01;35m${ACTION} \e[01;37m[\e[01;36m ${SNAPSHOT} \e[01;37m]\e[00m"
 		[ ! -z ${SNAPSHOT} ] && \
 			curl -s -XDELETE "http://${HOST}:9200/_snapshot/${REPO}/${SNAPSHOT}"
+		echo -e "\e[00m"
 		;;
 	create|CREATE)
 		ARGS=(${@})
