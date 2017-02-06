@@ -1,17 +1,18 @@
 #!/bin/bash
 
 ACTION=${1}
-SNAPSHOT=${2}
+REPONAME=${2}
+SNAPSHOT=${3}
 
 source snapshots.conf
 
 ls_snapshot_indexes(){
 	local SNAPSHOT=${1}
-	curl -s -XGET http://${HOST}:9200/_snapshot/${REPO}/${SNAPSHOT} | jq -r ' .snapshots | .[] | .indices | .[] ' | sort
+	curl -s -XGET http://${HOST}:9200/_snapshot/${REPONAME}/${SNAPSHOT} | jq -r ' .snapshots | .[] | .indices | .[] ' | sort
 }
 
 ls_snapshots(){
-	curl -s -XGET "http://${HOST}:9200/_snapshot/${REPO}/_all" | jq -r ' .snapshots | .[] | .snapshot' | sort
+	curl -s -XGET "http://${HOST}:9200/_snapshot/${REPONAME}/_all" | jq -r ' .snapshots | .[] | .snapshot' | sort
 }
 
 close_index(){
@@ -42,7 +43,7 @@ case ${ACTION} in
 	status|STATUS)
 		echo -e "\e[01;33msnapshot: \e[01;35m${ACTION}"
 		[ ! -z ${SNAPSHOT} ] && \
-			curl -s -XGET http://${HOST}:9200/_snapshot/${REPO}/${SNAPSHOT}/_status
+			curl -s -XGET http://${HOST}:9200/_snapshot/${REPONAME}/${SNAPSHOT}/_status
 		echo -e "\e[00m"
 		;;
 	ls)
@@ -65,30 +66,32 @@ case ${ACTION} in
 		;;
 	get|GET)
 		echo -e "\e[01;33msnapshot: \e[01;35m${ACTION}"
-		for SNAPSHOT in $(curl -s -XGET "http://${HOST}:9200/_snapshot/${REPO}/_all" | jq -r ' .snapshots | .[] | .snapshot' | sort)
+		for SNAPSHOT in $(curl -s -XGET "http://${HOST}:9200/_snapshot/${REPONAME}/_all" | jq -r ' .snapshots | .[] | .snapshot' | sort)
 		do
 			echo -e "\t\e[01;37m[\e[01;36m ${SNAPSHOT} \e[01;37m]\e[00m"
 			[[ "${2}" == "all" ]] && \
-			curl -s -XGET http://${HOST}:9200/_snapshot/${REPO}/${SNAPSHOT} | jq -r ' .snapshots | .[] | .indices | .[] ' | sort | xargs -i echo -en "\t\t\e[01;35m"{}"\e[00m\n"
+			curl -s -XGET http://${HOST}:9200/_snapshot/${REPONAME}/${SNAPSHOT} | jq -r ' .snapshots | .[] | .indices | .[] ' | sort | xargs -i echo -en "\t\t\e[01;35m"{}"\e[00m\n"
 		done
 		echo -e "\e[00m"
 		;;
 	delete|DELETE)
 		echo -e "\e[01;33msnapshot: \e[01;35m${ACTION} \e[01;37m[\e[01;36m ${SNAPSHOT} \e[01;37m]\e[00m"
 		[ ! -z ${SNAPSHOT} ] && \
-			curl -s -XDELETE "http://${HOST}:9200/_snapshot/${REPO}/${SNAPSHOT}"
+			curl -s -XDELETE "http://${HOST}:9200/_snapshot/${REPONAME}/${SNAPSHOT}"
 		echo -e "\e[00m"
 		;;
 	create|CREATE)
 		ARGS=(${@})
-		INDEX=${ARGS[@]:2}
-		if [ ! -z "${INDEX}" ] && [ ! -z ${SNAPSHOT} ]
+		INDEX=${ARGS[@]:3}
+		if [ ! -z "${REPONAME}" ] && [ ! -z "${INDEX}" ] && [ ! -z ${SNAPSHOT} ]
 		then
-			echo -e "\e[01;33msnapshot: \e[01;35m${ACTION} from ${INDEX} \e[01;37m[\e[01;36m ${SNAPSHOT} \e[01;37m]\e[00m"
-			curl -s -XPUT "http://${HOST}:9200/_snapshot/${REPO}/${SNAPSHOT}?wait_for_completion=true" \
-				-d '{"indices": "'${INDEX[@]// /,}'","ignore_unavailable": "true","include_global_state": false}' | jq .
+			echo -en "\e[01;33msnapshot: \e[01;35m${ACTION} ${REPONAME}/${SNAPSHOT} \e[01;37m[\e[01;36m ${INDEX} \e[01;37m]\e[00m "
+			curl -s -XPUT -o /dev/null -w %{http_code} "http://${HOST}:9200/_snapshot/${REPONAME}/${SNAPSHOT}?wait_for_completion=true" \
+				-d '{"indices": "'${INDEX[@]// /,}'","ignore_unavailable": "true","include_global_state": false}'
+			echo -e "\e[00m"
 		else
 			echo "FAILLLLLLLLLLLLLLLLLL.. in ${ACTION}"
+			exit 1
 		fi
 		;;
 	restore|RESTORE)
@@ -98,7 +101,7 @@ case ${ACTION} in
 			if [ ! -z ${INDEX} ]
 			then
 				echo -e "\e[01;33msnapshot: \e[01;35m${ACTION} \e[01;37m[\e[01;36m ${SNAPSHOT} \e[01;37m]  \e[01;37m[\e[01;36m ${INDEX} \e[01;37m]\e[00m"
-				curl -s -XPOST "http://${HOST}:9200/_snapshot/${REPO}/${SNAPSHOT}/_restore?wait_for_completion=true" \
+				curl -s -XPOST "http://${HOST}:9200/_snapshot/${REPONAME}/${SNAPSHOT}/_restore?wait_for_completion=true" \
 					-d '{
 							"indices": "'${INDEX}'",
 							"index_settings": {
@@ -111,7 +114,7 @@ case ${ACTION} in
 						}' | jq .
 			else
 				echo -e "\e[01;33msnapshot: \e[01;35m${ACTION} \e[01;37m[\e[01;36m ${SNAPSHOT} \e[01;37m]\e[00m"
-				curl -s -XPOST "http://${HOST}:9200/_snapshot/${REPO}/${SNAPSHOT}/_restore?wait_for_completion=true" \
+				curl -s -XPOST "http://${HOST}:9200/_snapshot/${REPONAME}/${SNAPSHOT}/_restore?wait_for_completion=true" \
 					-d '{
 							"index_settings": {
 								"index.nummber_of_shards": 1,
