@@ -56,7 +56,7 @@ close_index(){
         for NODE in ${NODES}
         do
                 echo -en "\t\e[01;46m${NODE}\e[00m\t"
-                curl -s -XPOST "http://${NODE}/${INDEX}/_close"
+                curl -s -XPOST -o /dev/null -w %{http_code} "http://${NODE}/${INDEX}/_close"
                 echo -e "\e[00m"
         done
 }
@@ -75,7 +75,7 @@ delete_index(){
 		if [[ "${STATE}" == "close" ]]
 		then
 			echo -en "\e[01;34mdeleting... \e[00m"
-	        	curl -s -XDELETE "http://${NODE}/${INDEX}"
+	        	curl -s -XDELETE -o /dev/null -w %{http_code} "http://${NODE}/${INDEX}"
 		else
 			echo -en "\e[01;37m ${STATE}\t\e[01;41mIndex is Not Closed\e[00m"
 		fi
