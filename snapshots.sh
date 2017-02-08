@@ -69,7 +69,7 @@ case ${ACTION} in
 		for SNAPSHOT in $(curl -s -XGET "http://${HOST}:9200/_snapshot/${REPONAME}/_all" | jq -r ' .snapshots | .[] | .snapshot' | sort)
 		do
 			echo -e "\t\e[01;37m[\e[01;36m ${SNAPSHOT} \e[01;37m]\e[00m"
-			[[ "${2}" == "all" ]] && \
+			[[ "${3}" == "all" ]] && \
 			curl -s -XGET http://${HOST}:9200/_snapshot/${REPONAME}/${SNAPSHOT} | jq -r ' .snapshots | .[] | .indices | .[] ' | sort | xargs -i echo -en "\t\t\e[01;35m"{}"\e[00m\n"
 		done
 		echo -e "\e[00m"
