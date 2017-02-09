@@ -2,6 +2,10 @@
 STEP=84600
 END=$(date --date="2016-01-01" +%s)
 URL="http://192.168.5.13:9200/_cat/indices"
+TODAY=$( date +%s )
+YESTERDAY=$(date --date=@$(( TODAY - ( STEP * 1 )  )) +%s)
+# Today and 3 more days always in production
+START=$(date --date=@$(( TODAY - ( STEP * 4 )  )) +%s)
 
 generate_index_list() {
 	local INDEX_PREFIX=${1}
@@ -29,11 +33,6 @@ checked_index_list() {
 		(( $STATUS == 200 )) && echo -en "${INDEX_NAME} "
 	done
 }
-
-TODAY=$( date +%s )
-YESTERDAY=$(date --date=@$(( TODAY - ( 84600 * 1 )  )) +%s)
-# Today and 3 more days always in production
-START=$(date --date=@$(( TODAY - ( 84600 * 4 )  )) +%s)
 
 case $1 in
 	execute)
@@ -72,6 +71,11 @@ case $1 in
 			(( ${#INDEX_LIST[@]} > 0 )) && \
 				echo -e "\t\e[01;34mFROM( ${INDEX_LIST[0]} ) TO( ${INDEX_LIST[$L]} ) indices\e[00m" && \
 				/root/es_scripts/indices.sh delete ${INDEX_LIST[@]}
+
+			# packet ${INDEX} $(date --date=@${TODAY} +%Y%m%d)
+			# upload ${INDEX} $(date --date=@${TODAY} +%Y%m%d)
+			# remove date - 3 in racky
+			# purge file system ( /es_snapshots ). if is sunday ?
 
 		done < <( awk '{print $1,$2,$3,$4}' archiving.list )
 	;;
@@ -141,5 +145,17 @@ case $1 in
 	;;
 	*)
 		echo "$0 [execute|dry|purge]"
+	;;
+	upload)
+		while read INDEX LIVE RETENTION ARCHIVING
+		do
+			if (( ${ARCHIVING} > 0 ))
+			then
+				mangement_snapshots.sh packet ${INDEX} $(date --date=@${TODAY} +%Y%m%d)
+				mangement_snapshots.sh upload ${INDEX} $(date --date=@${TODAY} +%Y%m%d)
+				# mangement_snapshots.sh remove date - 3 in racky
+				# mangement_snapshots.sh purge # file system ( /es_snapshots ). if is sunday ?
+			fi
+		done < <( awk '{print $1,$2,$3,$4}' archiving.list )
 	;;
 esac

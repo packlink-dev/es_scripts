@@ -4,7 +4,8 @@ ACTION=${1}
 REPONAME=${2}
 SNAPSHOT=${3}
 
-source snapshots.conf
+# source snapshots.conf
+HOST=$(netstat -ltpn | grep 9200 | awk '{print $4}' | awk -F':' '{print $1}')
 
 ls_snapshot_indexes(){
 	local SNAPSHOT=${1}
@@ -13,6 +14,10 @@ ls_snapshot_indexes(){
 
 ls_snapshots(){
 	curl -s -XGET "http://${HOST}:9200/_snapshot/${REPONAME}/_all" | jq -r ' .snapshots | .[] | .snapshot' | sort
+}
+
+ls_repos() {
+	curl -s -XGET "http://${HOST}:9200/_snapshot" | jq -r 'keys | .[]'
 }
 
 close_index(){
@@ -66,11 +71,11 @@ case ${ACTION} in
 		;;
 	get|GET)
 		echo -e "\e[01;33msnapshot: \e[01;35m${ACTION}"
-		for SNAPSHOT in $(curl -s -XGET "http://${HOST}:9200/_snapshot/${REPONAME}/_all" | jq -r ' .snapshots | .[] | .snapshot' | sort)
+		for SNAPSHOT in $(ls_snapshots)
 		do
 			echo -e "\t\e[01;37m[\e[01;36m ${SNAPSHOT} \e[01;37m]\e[00m"
 			[[ "${3}" == "all" ]] && \
-			curl -s -XGET http://${HOST}:9200/_snapshot/${REPONAME}/${SNAPSHOT} | jq -r ' .snapshots | .[] | .indices | .[] ' | sort | xargs -i echo -en "\t\t\e[01;35m"{}"\e[00m\n"
+			ls_snapshot_indexes ${SNAPSHOT} | xargs -i echo -en "\t\t\e[01;35m"{}"\e[00m\n"
 		done
 		echo -e "\e[00m"
 		;;
@@ -141,7 +146,13 @@ case ${ACTION} in
 			done
 		done
 		;;
+	repos)
+		echo -e "\e[01;33msnapshot: \e[01;35m${ACTION}"
+		ls_repos | xargs -i echo -en "\t\e[01;35m"{}"\e[00m\n"
+		;;
 	*)
-		echo "in progressss...."
+		echo "$0 <action> [<repo name>] [extras]"
+		echo "   action: [status|ls|compare|get|delete|create|restore|close]"
+		echo "$0 $1 in progressss...."
 		;;
 esac
