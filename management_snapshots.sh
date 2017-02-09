@@ -9,7 +9,7 @@ INFODIR=/tmp
 case $ACTION in
 	packet)
 		[[ $# < 3 ]] && echo "Wrong arguments" && $0 && exit 1
-		su -l elasticsearch -c "cd ${REPODIR}; tar cz ${REPO} | split -b 4900MiB - ${REPO}_${DATE}.tgz."
+		su -l elasticsearch -s /bin/bash -c "cd ${REPODIR}; tar cz ${REPO} | split -b 4900MiB - ${REPO}_${DATE}.tgz."
 		md5sum ${REPODIR}/${REPO}_${DATE}.tgz.* > ${INFODIR}/${REPO}_${DATE}.sum
 		/root/es_scripts/snapshots.sh get ${REPO} all > ${INFODIR}/${REPO}_${DATE}.info
 		;;
@@ -32,8 +32,7 @@ case $ACTION in
 		echo "PURGE FILESYSTEM"
 		cd ${INFODIR}
 		rm -f ${REPO}_${DATE}.* 
-		cd ${REPODIR}
-		rm -rf ${REPO}_${DATE}.tgz.* ${REPO}
+		su -l elasticsearch -s /bin/bash -c "cd ${REPODIR}; rm -rf ${REPO}_${DATE}.tgz.* ${REPO};mkdir ${REPO}"
 		;;
 	*)
 		cat << __EOF__
