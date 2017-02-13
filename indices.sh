@@ -139,8 +139,8 @@ case ${ACTION} in
 		then
 			for INDEX in ${INDICES[@]}
 			do
-				close_index ${INDEX}
-				delete_index ${INDEX}
+				# close_index ${INDEX}
+				# delete_index ${INDEX}
 			done
 		fi
 		;;

@@ -85,11 +85,35 @@ case ${ACTION} in
 			curl -s -XDELETE "http://${HOST}:9200/_snapshot/${REPONAME}/${SNAPSHOT}"
 		echo -e "\e[00m"
 		;;
+	state|STATE)
+		if [ ! -z "${REPONAME}" ]
+		then
+			[ ! -d ${REPONAME} ] && mkdir -p ${REPONAME}
+			if [ -z "${SNAPSHOT}" ]	
+			then
+				curl -s -XGET "http://${HOST}:9200/_snapshot/${REPONAME}/_all" | jq -r " .[] | .[] | .state"
+			else
+				CURL_STATUS=$( curl -s -XGET -w %{http_code} -o ${REPONAME}/${SNAPSHOT}.json "http://${HOST}:9200/_snapshot/${REPONAME}/${SNAPSHOT}" ) 
+				# echo "CURL_STATUS: ${CURL_STATUS}"
+				
+				JQ_STATE=$( cat ${REPONAME}/${SNAPSHOT}.json | jq -r " .[] | .[] | .state " 2>> /dev/null )
+				# echo "JQ_STATE: ${JQ_STATE}"
+
+				# echo "file ${REPONAME}/${SNAPSHOT}.json"
+				# cat ${REPONAME}/${SNAPSHOT}.json
+				# [ ! -z "${CURL_STATUS}" ] && [ "${CURL_STATUS}" == 200 ] && STATE=${JQ_STATE}
+			fi
+		fi
+		echo ${JQ_STATE}
+		;;
 	create|CREATE)
 		ARGS=(${@})
 		INDEX=${ARGS[@]:3}
 		if [ ! -z "${REPONAME}" ] && [ ! -z "${INDEX}" ] && [ ! -z ${SNAPSHOT} ]
 		then
+			[ ! -d "${REPONAME}" ] && mkdir ${REPONAME}
+			echo '{"indices": "'${INDEX[@]// /,}'","ignore_unavailable": "true","include_global_state": false}' > ${REPONAME}/${SNAPSHOT}.json
+			echo "curl -s -XPUT -o /dev/null -w %{http_code} 'http://${HOST}:9200/_snapshot/${REPONAME}/${SNAPSHOT}?wait_for_completion=true'" > ${REPONAME}/${SNAPSHOT}.curl
 			echo -en "\e[01;33msnapshot: \e[01;35m${ACTION} ${REPONAME}/${SNAPSHOT} \e[01;37m[\e[01;36m ${INDEX} \e[01;37m]\e[00m "
 			curl -s -XPUT -o /dev/null -w %{http_code} "http://${HOST}:9200/_snapshot/${REPONAME}/${SNAPSHOT}?wait_for_completion=true" \
 				-d '{"indices": "'${INDEX[@]// /,}'","ignore_unavailable": "true","include_global_state": false}'
