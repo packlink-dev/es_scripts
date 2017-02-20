@@ -6,6 +6,8 @@ SNAPSHOT=${3}
 
 # source snapshots.conf
 HOST=$(netstat -ltpn | grep 9200 | awk '{print $4}' | awk -F':' '{print $1}')
+APP=$(basename $0)
+APP=${APP%.sh}
 
 ls_snapshot_indexes(){
 	local SNAPSHOT=${1}
@@ -44,13 +46,9 @@ index_cat_info(){
 	fi
 }
 
+[ ! -d ${REPONAME} ] && mkdir -p ${REPONAME}
+
 case ${ACTION} in
-	status|STATUS)
-		echo -e "\e[01;33msnapshot: \e[01;35m${ACTION}"
-		[ ! -z ${SNAPSHOT} ] && \
-			curl -s -XGET http://${HOST}:9200/_snapshot/${REPONAME}/${SNAPSHOT}/_status
-		echo -e "\e[00m"
-		;;
 	ls)
 		echo -e "\e[01;33msnapshot: \e[01;35m${ACTION}  \e[01;37m[\e[01;36m ${SNAPSHOT} \e[01;37m]\e[00m"
 		[ ! -z ${SNAPSHOT} ] && \
@@ -91,7 +89,9 @@ case ${ACTION} in
 			[ ! -d ${REPONAME} ] && mkdir -p ${REPONAME}
 			if [ -z "${SNAPSHOT}" ]	
 			then
+				set -x
 				curl -s -XGET "http://${HOST}:9200/_snapshot/${REPONAME}/_all" | jq -r " .[] | .[] | .state"
+				set +x
 			else
 				CURL_STATUS=$( curl -s -XGET -w %{http_code} -o ${REPONAME}/${SNAPSHOT}.json "http://${HOST}:9200/_snapshot/${REPONAME}/${SNAPSHOT}" ) 
 				# echo "CURL_STATUS: ${CURL_STATUS}"
@@ -109,15 +109,27 @@ case ${ACTION} in
 	create|CREATE)
 		ARGS=(${@})
 		INDEX=${ARGS[@]:3}
+		CURL_COMMAND=${REPONAME}/${APP}_${1}_command.curl
+		CURL_PAYLOAD=${REPONAME}/${APP}_${1}_payload.json
+		CURL_RESULT=${REPONAME}/${APP}_${1}_response.json
+
 		if [ ! -z "${REPONAME}" ] && [ ! -z "${INDEX}" ] && [ ! -z ${SNAPSHOT} ]
 		then
 			[ ! -d "${REPONAME}" ] && mkdir ${REPONAME}
-			echo '{"indices": "'${INDEX[@]// /,}'","ignore_unavailable": "true","include_global_state": false}' > ${REPONAME}/${SNAPSHOT}.json
-			echo "curl -s -XPUT -o /dev/null -w %{http_code} 'http://${HOST}:9200/_snapshot/${REPONAME}/${SNAPSHOT}?wait_for_completion=true'" > ${REPONAME}/${SNAPSHOT}.curl
+			echo '{"indices": "'${INDEX[@]// /,}'","ignore_unavailable": "true","include_global_state": false}' > ${CURL_PAYLOAD}
+			echo "curl -s -XPUT -o /dev/null -w %{http_code} 'http://${HOST}:9200/_snapshot/${REPONAME}/${SNAPSHOT}?wait_for_completion=true'" > ${CURL_COMMAND}
 			echo -en "\e[01;33msnapshot: \e[01;35m${ACTION} ${REPONAME}/${SNAPSHOT} \e[01;37m[\e[01;36m ${INDEX} \e[01;37m]\e[00m "
-			curl -s -XPUT -o /dev/null -w %{http_code} "http://${HOST}:9200/_snapshot/${REPONAME}/${SNAPSHOT}?wait_for_completion=true" \
+			curl -s -XPUT -o ${CURL_RESULT} "http://${HOST}:9200/_snapshot/${REPONAME}/${SNAPSHOT}?wait_for_completion=true" \
 				-d '{"indices": "'${INDEX[@]// /,}'","ignore_unavailable": "true","include_global_state": false}'
-			echo -e "\e[00m"
+
+			RETURN=$(cat ${CURL_RESULT} | jq -r .snapshot.state 2>> /dev/null)
+			# RETURN:
+			# 	empty: error in jq ${CURL_RESULT} isn't a file
+			#	'null': ${CURL_RESULT} is a json but it's a error response from elasticsearch
+			#	'SUSCCESS|FAILED|STARTED': snapshot status
+			echo "${RETURN}"
+			[ -z "${RETURN}" ] && exit 3
+			[ "${RETURN}" == "null" ] && exit 4
 		else
 			echo "FAILLLLLLLLLLLLLLLLLL.. in ${ACTION}"
 			exit 1

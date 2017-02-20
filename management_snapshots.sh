@@ -21,17 +21,26 @@ case $ACTION in
 		;;
 	upload)
 		[[ $# < 3 ]] && echo "Wrong arguments" && $0 && exit 1
-		bash racky.sh logger ${REPO} ${INFODIR} ${REPO}_${DATE}.sum
-		bash racky.sh logger ${REPO} ${INFODIR} ${REPO}_${DATE}.info
+		bash racky.sh upload logger ${REPO} ${INFODIR} ${REPO}_${DATE}.sum
+		bash racky.sh upload logger ${REPO} ${INFODIR} ${REPO}_${DATE}.info
 		for FILE in ${REPODIR}/${REPO}_${DATE}.tgz.*
 		do
 			FILE_NAME=$(basename ${FILE})
 			echo ${FILE}
-			bash racky.sh logger ${REPO} ${REPODIR} ${FILE_NAME}
+			bash racky.sh upload logger ${REPO} ${REPODIR} ${FILE_NAME}
 		done
 		;;
 	remove)
-		echo "RACKY REMOVE"
+		REPO=${2}
+		DATES=( $(bash racky.sh list logger | grep ${REPO} | awk -F'/' '{print $2}' | sort | uniq | xargs echo) )
+		if (( ${#DATES[@]} > 2 )) 
+		then
+			
+			for OBJECT in $(bash racky.sh list logger | grep ${REPO}/${DATES[0]} )
+			do 
+				bash racky.sh remove logger ${OBJECT}
+			done
+		fi
 		;;
 	purge)
 		[[ $# < 3 ]] && echo "Wrong arguments" && $0 && exit 1
@@ -39,6 +48,9 @@ case $ACTION in
 		cd ${INFODIR}
 		rm -f ${REPO}_${DATE}.* 
 		su -l elasticsearch -s /bin/bash -c "cd ${REPODIR}; rm -rf ${REPO}_${DATE}.tgz.* ${REPO};mkdir ${REPO}"
+		;;
+	days)
+		bash racky.sh list logger | awk -F'/' '{print $2}' | sort | uniq
 		;;
 	*)
 		cat << __EOF__

@@ -1,5 +1,25 @@
 #!/bin/bash
 
+get_token(){
+	source rackspace.rc
+	local RESPONSE=/tmp/.racky.response
+
+	curl -s -XPOST https://identity.api.rackspacecloud.com/v2.0/tokens \
+	  -H "Content-Type: application/json" \
+	  -d '{
+	    "auth": {
+	      "RAX-KSKEY:apiKeyCredentials": {
+		"username": "'${RACKYUSER}'",
+		"apiKey": "'${RACKYAPIK}'"
+	      }
+	    }
+	  }' > ${RESPONSE}
+
+	local TOKEN=$( cat ${RESPONSE} | jq -r .access.token.id )
+	local ENDPOINT=$( cat ${RESPONSE} | jq -r '.access.serviceCatalog | .[] | select(.name=="cloudFiles") | .endpoints[0].publicURL' )
+	printf "%s %s" ${TOKEN} ${ENDPOINT}
+}
+
 uploadfile(){
 	source rackspace.rc
 	local RESPONSE=/tmp/.racky.response
@@ -41,20 +61,78 @@ uploadfile(){
 	grep ${FILE_MD5SUM} ${RESPONSE} 2>&1 >> /dev/null || echo -e "\e[01;34mWRONG UPLOAD\e[01;37m [ \e[01;34m${FILE_MD5SUM}/${UPLOAD_SUM}\e[01;37m ]\e[00m"
 }
 
+list_v1(){
+	source rackspace.rc
+	local RESPONSE=/tmp/.racky.response
+	local CFROOT=${1}
+
+	curl -s -XPOST https://identity.api.rackspacecloud.com/v2.0/tokens \
+	  -H "Content-Type: application/json" \
+	  -d '{
+	    "auth": {
+	      "RAX-KSKEY:apiKeyCredentials": {
+		"username": "'${RACKYUSER}'",
+		"apiKey": "'${RACKYAPIK}'"
+	      }
+	    }
+	  }' > ${RESPONSE}
+
+	local TOKEN=$( cat ${RESPONSE} | jq -r .access.token.id )
+	local ENDPOINT=$( cat ${RESPONSE} | jq -r '.access.serviceCatalog | .[] | select(.name=="cloudFiles") | .endpoints[0].publicURL' )
+
+	[ -f /tmp/racky.list.json ] && rm /tmp/racky.list.json
+
+	curl -sw %{http_code} -L -o /tmp/racky.list.json -XGET ${ENDPOINT}/${CFROOT} -H "X-Auth-Token: $TOKEN" -H "Accept: application/json"
+	cat /tmp/racky.list.json | jq -r ' .[] | .name'
+}
+
+list(){
+	local TOKEN=${1}
+	local ENDPOINT=${2}
+	local OBJECT=${3}
+
+	[ -f /tmp/racky.list.json ] && rm /tmp/racky.list.json
+
+	curl -s -o /tmp/racky.list.json -XGET ${ENDPOINT}/${OBJECT} -H "X-Auth-Token: $TOKEN" -H "Accept: application/json"
+	cat /tmp/racky.list.json | jq -r ' .[] | .name'
+}
+
+remove(){
+	local TOKEN=${1}
+	local ENDPOINT=${2}
+	local OBJECT=${3}
+
+	[ -f /tmp/racky.remove.json ] && rm /tmp/racky.remove.json
+
+	HTTP_CODE=$(curl -sw %{http_code} -L -o /tmp/racky.remove.json -XDELETE "${ENDPOINT}/${OBJECT}" -H "X-Auth-Token: $TOKEN" -H "Accept: application/json")
+	# cat /tmp/racky.remove.json # | jq -r ' .[] | .name'
+	return ${HTTP_CODE}
+}
+
 usage(){
 	cat << __EOF__
-$0 <root directory> <directory> <local directory> <file>
+$0 <action> <root directory> [<directory> <local directory> <file>|<date>]
 
+        action:          list|upload
 	root directory:  Cloud Files Root Directory.
 	directory:       Directory where you want to save the file.
 	local directory: In local, where is the file what you want upload.
 	file;            File to upload
+	date:            YYYYMMDD objects to remove
 
   Example:
 
   $0 logger_test index_test /root/es_scripts archiving.list
 
 __EOF__
+}
+
+
+check_params(){
+	local NUM=${1}
+	local ARGS=( ${@:2} )
+	
+	(( ${#ARGS[@]} < ${NUM} )) && return 1 || return 0
 }
 
 test(){
@@ -64,9 +142,47 @@ test(){
 	exit 0
 }	
 
-# test
 
-[[ $# < 4 ]] && usage && exit 1
+# __params__
+# upload = 6: action + 5 params ( <cloudfiles root directory> <cloudfiles directory> <local directory> <file> )
+# list   = 2: action + 1 param  ( <cloudfiles root directory> )
+# remove = 3: action + 2 params ( <cloudfiles root directory> <object inside cloudfiles root directory> ) 
 
-# uploadfile logger_test index_test_2 /root/es_scripts archiving.list
-uploadfile $1 $2 $3 $4 $5
+case $1 in
+	upload)
+		check_params 5 ${@}
+		[ $? -eq 1 ] && usage && exit 1
+		# racky.sh upload logger_test index_test_2 /root/es_scripts archiving.list
+		uploadfile $2 $3 $4 $5 $6
+		;;
+	list)
+		check_params 2 ${@}
+		if [ $? -eq 0 ]
+		then
+			CFROOT=$2
+			read TOKEN ENDPOINT < <( get_token )
+			list ${TOKEN} ${ENDPOINT} ${CFROOT}
+		else
+			usage
+			exit 1
+		fi
+		;;
+	remove)
+		echo ${@}
+		check_params 3 ${@}
+		if [ $? -eq 0 ]
+		then
+			CFROOT=$2
+			OBJECT=$3
+			read TOKEN ENDPOINT < <( get_token )
+			remove ${TOKEN} ${ENDPOINT} ${CFROOT}/${OBJECT}
+			exit $?
+		else
+			usage
+			exit 1
+		fi
+		;;
+	*)
+		echo "NORRRR"
+		;;
+esac

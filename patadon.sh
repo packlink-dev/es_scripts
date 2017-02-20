@@ -66,7 +66,7 @@ archive() {
 	local RETENTION=${3}
 	local ARCHIVING=${4}
 	
-	slack "*$(basename $0)* *$1* \`${INDEX}\`"
+	slack "$(basename $0) \`${INDEX}\`"
 	echo -e "${INDEX} [ $(date --date=@${TODAY} +%Y.%m.%d) ]" >> ${LOG_FILE}
 	echo -e "\tSTART: $(date --date=@${START} +%Y.%m.%d)" >> ${LOG_FILE}
 
@@ -91,6 +91,7 @@ archive() {
 		(( ${#INDEX_LIST[@]} > 0 )) && \
 			echo -e "\tFROM( ${INDEX_LIST[0]} ) TO( ${INDEX_LIST[${LEN}]} ) indices"  >> ${LOG_FILE} && \
 			/root/es_scripts/snapshots.sh create ${INDEX} ${INDEX}-$(date --date=@${TODAY} +%Y%m%d) ${INDEX_LIST[@]}
+			echo $?
 	else
 		slack "*archive no needed*"
 		echo -e "\tNOTHING TO ARCHIVE" >> ${LOG_FILE}
@@ -110,7 +111,7 @@ case $1 in
 			[ -z "${STATE}" ] && archive ${INDEX} ${LIVE} ${RETENTION} ${ARCHIVING}
 		done < <( awk '{print $1,$2,$3,$4}' archiving.list )
 
-		slack "*$(basename $0)* $1 done" alert # operations
+		slack "$(basename $0) \`$1\` *done*" alert # operations
 	;;
 	rearchive)
 		while read INDEX LIVE RETENTION ARCHIVING
@@ -128,7 +129,7 @@ case $1 in
 	deletes)
 		while read INDEX LIVE RETENTION ARCHIVING
 		do
-			slack "*$(basename $0)* *$1* \`${INDEX}\`"
+			slack "$(basename $0) _${1}_ \`${INDEX}\`"
 			echo -e "${INDEX} [ $(date --date=@${TODAY} +%Y.%m.%d) ]" >> ${LOG_FILE}
 			echo -e "\tSTART: $(date --date=@${START} +%Y.%m.%d)" >> ${LOG_FILE}
 
@@ -145,12 +146,15 @@ case $1 in
 			# deleting
 			INDEX_LIST=( $(checked_index_list ${INDEX} ${RETENTION_TIME} ${END} ) )
 			LEN=$(( ${#INDEX_LIST[@]} - 1 ))
-			slack "to _delete_ \`\`\`[ from: ${INDEX_LIST[0]} to: ${INDEX_LIST[$LEN]} ]\`\`\`"
+			if (( ${LEN} > 0 ))
+			then
+				slack "to _delete_ \`\`\`[ from: ${INDEX_LIST[0]} to: ${INDEX_LIST[$LEN]} ]\`\`\`"
 
-			echo -e "\tTO DELETE:  ${#INDEX_LIST[@]} indices" >> ${LOG_FILE}
-			(( ${#INDEX_LIST[@]} > 0 )) && \
-				echo -e "\tFROM( ${INDEX_LIST[0]} ) TO( ${INDEX_LIST[$LEN]} ) indices" >> ${LOG_FILE} && \
-				/root/es_scripts/indices.sh delete ${INDEX_LIST[@]}
+				echo -e "\tTO DELETE:  ${#INDEX_LIST[@]} indices" >> ${LOG_FILE}
+				(( ${#INDEX_LIST[@]} > 0 )) && \
+					echo -e "\tFROM( ${INDEX_LIST[0]} ) TO( ${INDEX_LIST[$LEN]} ) indices" >> ${LOG_FILE} && \
+					/root/es_scripts/indices.sh delete ${INDEX_LIST[@]}
+			fi
 
 			# packet ${INDEX} $(date --date=@${TODAY} +%Y%m%d)
 			# upload ${INDEX} $(date --date=@${TODAY} +%Y%m%d)
@@ -159,12 +163,18 @@ case $1 in
 
 		done < <( awk '{print $1,$2,$3,$4}' archiving.list )
 
-		slack "*$(basename $0)* $1 done" alert # operations
+		slack "$(basename $0) \`$1\` *done*" alert # operations
 	;;
 
 	execute)
-		echo "$0 archive ${@:2}"
-		echo "$0 delete ${@:2}"
+		my_date ${TODAY} %Y.%m.%d
+		slack "$(basename $0) \`$1\` *started*" alert # operations
+		bash $0 snapshots ${@:2}
+		# if archive correct ....
+		# echo "$0 hulk ${@:2}"
+		bash $0 deletes ${@:2}
+		bash $0 manage ${@:2}
+		slack "$(basename $0) \`$1\` *finished*" alert # operations
 		# while read INDEX LIVE RETENTION ARCHIVING
 		# do
 		# 	slack "*$(basename $0)* *$1* \`${INDEX}\`"
@@ -281,21 +291,46 @@ case $1 in
 		done < <( awk '{print $1,$2,$3,$4}' archiving.list )
 	;;
 	manage)
+		TODAY_DATE=$( date --date=@${TODAY} +%Y%m%d)
 		while read REPO LIVE RETENTION ARCHIVING
 		do
+			slack "$(basename $0) _${1}_ \`${REPO}\`"
 			if (( ${ARCHIVING} > 0 ))
 			then
 
-			        echo "$REPO [ packet ]"
-			        ./management_snapshots.sh packet $REPO 20170209
+				echo "$REPO [ packet ]"
+			        slack "_packet_"
+			        ./management_snapshots.sh packet ${REPO} ${TODAY_DATE}
 				echo "$REPO [ upload ]"
-			        ./management_snapshots.sh upload $REPO 20170209
+			        slack "_upload_"
+			        ./management_snapshots.sh upload ${REPO} ${TODAY_DATE}
 			        echo "$REPO [ purge ]"
-			        ./management_snapshots.sh purge $REPO 20170209
+			        slack "_purge_"
+			        ./management_snapshots.sh purge ${REPO} ${TODAY_DATE}
+			        echo "$REPO [ remove ]"
+			        slack "_remove_"
+				./management_snapshots.sh remove ${REPO}
 				# mangement_snapshots.sh remove date - 3 in racky
 				# mangement_snapshots.sh purge # file system ( /es_snapshots ). if is sunday ?
 			fi
 		done < <( awk '{print $1,$2,$3,$4}' archiving.list )
+
+		slack "$(basename $0) \`$1\` *done*" alert # operations
+	;;
+	remove)
+		while read REPO LIVE RETENTION ARCHIVING
+		do
+			slack "$(basename $0) _${1}_ \`${REPO}\`"
+			if (( ${ARCHIVING} > 0 ))
+			then
+
+			        echo "$REPO [ remove ]"
+			        slack "_rempve_"
+				./management_snapshots.sh remove ${REPO}
+			fi
+		done < <( awk '{print $1,$2,$3,$4}' archiving.list )
+
+		slack "$(basename $0) \`$1\` *done*" alert # operations
 	;;
 	restore)
 		# restore with snapshost.sh 
