@@ -29,7 +29,7 @@ optimize(){
 		grep -v 127.0.0.1 | sed -r 's:inet\[\/(.*)\]:\1:' )
 	for NODE in ${NODES}
 	do
-		echo -en "\t\e[01;46m${NODE}\e[00m\t"
+		echo -en "\t\e[01;46moptimizin in ${NODE}\e[00m\t"
 		curl -s -XPOST "http://${NODE}/_optimize"
 		echo -e "\e[00m"
 	done
@@ -152,10 +152,12 @@ case ${ACTION} in
 		then
 			for INDEX in ${INDICES[@]}
 			do
+				flush_index ${INDEX}
 				close_index ${INDEX}
 				delete_index ${INDEX}
 			done
 		fi
+		optimize
 		;;
 	optimize|OPTIMIZE)
 		echo -e "\e[01;33mindices: \e[01;35m${ACTION}\e[00m"

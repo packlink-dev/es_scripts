@@ -6,6 +6,7 @@ SNAPSHOT=${3}
 
 # source snapshots.conf
 HOST=$(netstat -ltpn | grep 9200 | awk '{print $4}' | awk -F':' '{print $1}')
+[ -z ${HOST} ] && HOST=localhost
 APP=$(basename $0)
 APP=${APP%.sh}
 
@@ -145,6 +146,8 @@ case ${ACTION} in
 				curl -s -XPOST "http://${HOST}:9200/_snapshot/${REPONAME}/${SNAPSHOT}/_restore?wait_for_completion=true" \
 					-d '{
 							"indices": "'${INDEX}'",
+							"include_aliases": false,
+							"include_global_state": false,
 							"index_settings": {
 								"index.nummber_of_shards": 1,
 								"index.number_of_replicas": 0
@@ -157,6 +160,8 @@ case ${ACTION} in
 				echo -e "\e[01;33msnapshot: \e[01;35m${ACTION} \e[01;37m[\e[01;36m ${SNAPSHOT} \e[01;37m]\e[00m"
 				curl -s -XPOST "http://${HOST}:9200/_snapshot/${REPONAME}/${SNAPSHOT}/_restore?wait_for_completion=true" \
 					-d '{
+							"include_aliases": false,
+							"include_global_state": false,
 							"index_settings": {
 								"index.nummber_of_shards": 1,
 								"index.number_of_replicas": 0
