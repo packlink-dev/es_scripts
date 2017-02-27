@@ -10,9 +10,9 @@ LEN=${#NODES[@]}
 while read INDEX SHARD
 do
     NODE=${NODES[$(( RANDOM % LEN ))]}
-    echo $INDEX 
-    echo $SHARD
-    echo $NODE
+     #echo $INDEX 
+     #echo $SHARD
+     #echo $NODE
     echo -e "\e[01;33mReallocating in \e[01;35m$NODE \e[01;37m[\e[01;36m ${INDEX} \e[01;37m]\e[00m"
     curl -s -o relocate/${INDEX}.${SHARD}.${NODE}.json -XPOST "http://${HOST}:9200/_cluster/reroute" -d '{
          "commands" : [ {

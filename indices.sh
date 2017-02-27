@@ -55,12 +55,25 @@ close_index(){
                 grep -v 127.0.0.1 | sed -r 's:inet\[\/(.*)\]:\1:' )
         for NODE in ${NODES}
         do
-                echo -en "\t\e[01;46m${NODE}\e[00m\t"
+                echo -en "\t\e[01;46mclosing in ${NODE}\e[00m\t"
                 curl -s -XPOST -o /dev/null -w %{http_code} "http://${NODE}/${INDEX}/_close"
                 echo -e "\e[00m"
         done
 }
 
+
+flush_index(){
+        local INDEX=${1}
+        NODES=$( curl -s -XGET 192.168.5.13:9200/_nodes | \
+                jq -r '.nodes | .[] | .http | .publish_address' | \
+                grep -v 127.0.0.1 | sed -r 's:inet\[\/(.*)\]:\1:' )
+        for NODE in ${NODES}
+        do
+                echo -en "\t\e[01;46mflushing in ${NODE}\e[00m\t"
+                curl -s -XPOST -o /dev/null -w %{http_code} "http://${NODE}/${INDEX}/_flush"
+                echo -e "\e[00m"
+        done
+}
 
 delete_index(){
         local INDEX=${1}
@@ -69,7 +82,7 @@ delete_index(){
                 grep -v 127.0.0.1 | sed -r 's:inet\[\/(.*)\]:\1:' )
         for NODE in ${NODES}
         do
-                echo -en "\t\e[01;46m${NODE}\e[00m\t"
+                echo -en "\t\e[01;46mdeleteing ${NODE}\e[00m\t"
 		# Get index state ( open/close .. ) and remove all spaces
 		STATE=$(curl -s -XGET "http://${NODE}/_cat/indices/${INDEX}?h=s" | sed -e 's/ //g')
 		if [[ "${STATE}" == "close" ]]
