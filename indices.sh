@@ -1,8 +1,13 @@
 #!/bin/bash
 
-source snapshots.conf
 declare -a DATA_NODES
 declare -a BIND_NODES
+declare HOST
+
+get_host(){
+	HOST=$(netstat -ltpn | awk '/9200/ {print $4}' | awk -F':' '{print $1}')
+	[ -z ${HOST} ] && HOST=localhost
+}
 
 data_nodes(){
 	DATA_NODES=( $(curl -s -XGET "http://${HOST}:9200/_cat/nodes?h=r,n" | awk '/^d/ {print $2}' | xargs -i echo -n {}" ") )
@@ -100,16 +105,12 @@ delete_index(){
 relocate(){
 	[ -z "${DATA_NODES}" ] && data_nodes
 	[ ! -d relocate ] && mkdir -v relocate
+	local LEN=${#DATA_NODES[@]}
 
 	while read INDEX SHARD
 	do
  	
-	    NODE=""
-	    while [[ -z ${NODE} ]]
-	    do
-		NODE=${DATA_NODES[$(( ( RANDOM % 5 ) ))]}
-	    done
-
+	    NODE=${DATA_NODES[$(( RANDOM % LEN ))]}
 	    echo -e "\e[01;33mReallocating in \e[01;35m$NODE \e[01;37m[\e[01;36m ${INDEX} \e[01;37m]\e[00m"
 	    curl -s -o relocate/${INDEX}.${SHARD}.${NODE}.json -XPOST "http://${HOST}:9200/_cluster/reroute" -d '{
 		 "commands" : [ {
@@ -122,7 +123,6 @@ relocate(){
 		     }
 		 ]
 	     }'
-	    sleep ${DELAY}
 	    # echo -e "\e[00m"
 	done < <( curl -s -XGET http://${HOST}:9200/_cat/shards | grep -i unassigned | awk '{print $1,$2}' | sort )
 	# Note!
@@ -133,10 +133,13 @@ relocate(){
 	#  <( )
 }
 
+
+
 ACTION=${1}
+get_host
 
 case ${ACTION} in
-	ls|LS)
+	list|LIST)
 		PATTERN=${2}
 		echo -e "\e[01;33mindices: \e[01;35m${ACTION}\e[00m"
 		curl -s -XGET http://${HOST}:9200/_cat/indices?h=i,s,dc,ss

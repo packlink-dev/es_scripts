@@ -173,7 +173,7 @@ case $1 in
 		# if archive correct ....
 		# echo "$0 hulk ${@:2}"
 		bash $0 deletes ${@:2}
-		bash $0 manage ${@:2}
+		# bash $0 manage ${@:2}
 		slack "$(basename $0) \`$1\` *finished*" alert # operations
 		# while read INDEX LIVE RETENTION ARCHIVING
 		# do

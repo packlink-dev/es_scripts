@@ -4,7 +4,6 @@ ACTION=${1}
 REPONAME=${2}
 SNAPSHOT=${3}
 
-# source snapshots.conf
 HOST=$(netstat -ltpn | grep 9200 | awk '{print $4}' | awk -F':' '{print $1}')
 [ -z ${HOST} ] && HOST=localhost
 APP=$(basename $0)
