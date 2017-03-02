@@ -175,56 +175,6 @@ case $1 in
 		bash $0 deletes ${@:2}
 		# bash $0 manage ${@:2}
 		slack "$(basename $0) \`$1\` *finished*" alert # operations
-		# while read INDEX LIVE RETENTION ARCHIVING
-		# do
-		# 	slack "*$(basename $0)* *$1* \`${INDEX}\`"
-		# 	echo -e "${INDEX} [ $(date --date=@${TODAY} +%Y.%m.%d) ]" >> ${LOG_FILE}
-		# 	echo -e "\tSTART: $(date --date=@${START} +%Y.%m.%d)" >> ${LOG_FILE}
-
-		# 	LIVE_TIME=$(date --date=@$(( START - $(( LIVE  * 84600 )) )) +%s)
-		# 	echo -e "\tPRODUCTION: START - ${LIVE} $(date --date=@${LIVE_TIME} +%Y.%m.%d)" >> ${LOG_FILE}
-
-		# 	RETENTION_TIME=$(date --date=@$(( LIVE_TIME - ( RETENTION  * 84600 ) )) +%s)
-		# 	echo -e "\tRETENTION:  START - ${RETENTION} $(date --date=@${RETENTION_TIME} +%Y.%m.%d)" >> ${LOG_FILE}
-
-		# 	# Not Used
-		# 	ARCHIVING_TIME=$(date --date=@$(( LIVE_TIME - ( ARCHIVING  * 84600 ) )) +%s)
-		# 	echo -e "\tARCHIVING:  START - ${ARCHIVING} $(date --date=@${ARCHIVING_TIME} +%Y.%m.%d)" >> ${LOG_FILE}
-		# 	
-		# 	# snapshotting
-		# 	if (( ${ARCHIVING} > 0 ))
-		# 	then
-		# 		INDEX_LIST=( $(checked_index_list ${INDEX} ${YESTERDAY} ${ARCHIVING_TIME}) )
-		# 		LEN=$(( ${#INDEX_LIST[@]} - 1 ))
-		# 		slack "to _archive_ \`\`\`[ from: ${INDEX_LIST[0]} to: ${INDEX_LIST[$LEN]} ]\`\`\`"
-
-		# 		echo -e "\tTO ARCHIVE: ${#INDEX_LIST[@]} indices" >> ${LOG_FILE}
-		# 		(( ${#INDEX_LIST[@]} > 0 )) && \
-		# 			echo -e "\tFROM( ${INDEX_LIST[0]} ) TO( ${INDEX_LIST[${LEN}]} ) indices"  >> ${LOG_FILE} && \
-		# 			/root/es_scripts/snapshots.sh create ${INDEX} ${INDEX}-$(date --date=@${TODAY} +%Y%m%d) ${INDEX_LIST[@]}
-		# 	else
-		# 		slack "*archive no needed*"
-		# 		echo -e "\tNOTHING TO ARCHIVE" >> ${LOG_FILE}
-		# 	fi
-
-		# 	# deleting
-		# 	INDEX_LIST=( $(checked_index_list ${INDEX} ${RETENTION_TIME} ${END} ) )
-		# 	LEN=$(( ${#INDEX_LIST[@]} - 1 ))
-		# 	slack "to _delete_ \`\`\`[ from: ${INDEX_LIST[0]} to: ${INDEX_LIST[$LEN]} ]\`\`\`"
-
-		# 	echo -e "\tTO DELETE:  ${#INDEX_LIST[@]} indices" >> ${LOG_FILE}
-		# 	(( ${#INDEX_LIST[@]} > 0 )) && \
-		# 		echo -e "\tFROM( ${INDEX_LIST[0]} ) TO( ${INDEX_LIST[$LEN]} ) indices" >> ${LOG_FILE} && \
-		# 		/root/es_scripts/indices.sh delete ${INDEX_LIST[@]}
-
-		# 	# packet ${INDEX} $(date --date=@${TODAY} +%Y%m%d)
-		# 	# upload ${INDEX} $(date --date=@${TODAY} +%Y%m%d)
-		# 	# remove date - 3 in racky
-		# 	# purge file system ( /es_snapshots ). if is sunday ?
-
-		# done < <( awk '{print $1,$2,$3,$4}' archiving.list )
-
-		# slack "*$(basename $0)* $1 done" alert # operations
 	;;
 	dry)
 		while read INDEX LIVE RETENTION ARCHIVING

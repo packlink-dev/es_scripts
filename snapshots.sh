@@ -83,25 +83,29 @@ case ${ACTION} in
 			curl -s -XDELETE "http://${HOST}:9200/_snapshot/${REPONAME}/${SNAPSHOT}"
 		echo -e "\e[00m"
 		;;
+	get_states)
+		if [ ! -z "${REPONAME}" ]
+		then
+			if [ -z "${SNAPSHOT}" ]	
+			then
+				curl -s -XGET "http://${HOST}:9200/_snapshot/${REPONAME}/_all" | jq " .[] | .[] | [ .snapshot, .state ]"
+			else
+				CURL_STATUS=$( curl -s -XGET -w %{http_code} -o ${REPONAME}/${SNAPSHOT}.json "http://${HOST}:9200/_snapshot/${REPONAME}/${SNAPSHOT}" ) 
+				JQ_STATE=$( cat ${REPONAME}/${SNAPSHOT}.json | jq -r " .[] | .[] | .state " 2>> /dev/null )
+			fi
+		fi
+		echo ${JQ_STATE}
+		;;
 	state|STATE)
 		if [ ! -z "${REPONAME}" ]
 		then
 			[ ! -d ${REPONAME} ] && mkdir -p ${REPONAME}
 			if [ -z "${SNAPSHOT}" ]	
 			then
-				set -x
 				curl -s -XGET "http://${HOST}:9200/_snapshot/${REPONAME}/_all" | jq -r " .[] | .[] | .state"
-				set +x
 			else
 				CURL_STATUS=$( curl -s -XGET -w %{http_code} -o ${REPONAME}/${SNAPSHOT}.json "http://${HOST}:9200/_snapshot/${REPONAME}/${SNAPSHOT}" ) 
-				# echo "CURL_STATUS: ${CURL_STATUS}"
-				
 				JQ_STATE=$( cat ${REPONAME}/${SNAPSHOT}.json | jq -r " .[] | .[] | .state " 2>> /dev/null )
-				# echo "JQ_STATE: ${JQ_STATE}"
-
-				# echo "file ${REPONAME}/${SNAPSHOT}.json"
-				# cat ${REPONAME}/${SNAPSHOT}.json
-				# [ ! -z "${CURL_STATUS}" ] && [ "${CURL_STATUS}" == 200 ] && STATE=${JQ_STATE}
 			fi
 		fi
 		echo ${JQ_STATE}
